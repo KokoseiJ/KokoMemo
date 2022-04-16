@@ -39,7 +39,11 @@ GET   | /user/register/_read_token
 
 ==== User ====
 
-id: User ID. incremental value.
+id: base64url random 9bytes
+pw: bcrypt hashed sha256 hashed password
+email: email
+name: name
+create_time: create_time
 
 
 === JSON formats ===
@@ -99,5 +103,8 @@ Directory example:
 ===== Registration Token =====
 
 {
-    "exp":
+    "exp": expiring time
+    "email": email
+    "password": password,
+    "name": name
 }

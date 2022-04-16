@@ -1,8 +1,8 @@
-import os
-import sys
+import pytest
+
 import json
+import hashlib
 import requests
-import traceback
 
 TEST_URL = "http://127.0.0.1:5000"
 
@@ -18,113 +18,14 @@ def merge_route(baseurl, route):
     return f"{baseurl}/{route}"
 
 
-class TestAssertionError(Exception):
-    def __init__(self, type_, var1, var2):
-        self.var1 = var1
-        self.var2 = var2
-        txtlist = [
-            f"Assert{type_} failed!",
-            f"var1: {var1}",
-            f"var2: {var2}"
-        ]
-        self.args = ("\n".join(txtlist),)
-
-
-class TestAssertionExceptionError(Exception):
-    def __init__(self, func, exc, rtn):
-        self.func = func
-        self.exc = exc
-        self.return_value = rtn
-        txtlist = [
-            f"AssertionException for {func.__name__} failed!"
-            f"Raised Exception: {exc.__name__}" if exc
-            else f"Returned value: {rtn}"
-        ]
-        self.args = ("\n".join(txtlist),)
-
-
 class MemoHTTPError(Exception):
-    def __init__(self, status, code, message):
-        self.args = (f"Status {status}: {code} {message}")
+    def __init__(self, status, message):
+        self.args = (f"Status {status}: {message}")
         self.status = status
-        self.code = code
         self.message = message
 
 
-class TestManager:
-    def __init__(self):
-        self.tests = []
-
-    def register(self, func):
-        self.tests.append(func)
-        return func
-
-    def assertEquals(self, val1, val2):
-        if val1 == val2:
-            return None
-        else:
-            raise TestAssertionError("Equals", val1, val2)
-
-    def assertNotEquals(self, val1, val2):
-        if val1 != val2:
-            return None
-        else:
-            raise TestAssertionError("NotEquals", val1, val2)
-
-    def assertRaises(self, func, *excs):
-        try:
-            rtnval = func()
-        except Exception as e:
-            if e.__class__ not in excs:
-                raise TestAssertionExceptionError(func, e, None)
-
-            return e
-
-        raise TestAssertionExceptionError(func, None, rtnval)
-
-    def run(self):
-        exceptions = {}
-
-        print("="*10 + " Test Started " + "="*10, end="\n\n")
-
-        for func in self.tests:
-            print(f"\t{func.__name__}\t| ", end="")
-            sys.stdout.flush()
-
-            result = self._run(func)
-
-            if result is None:
-                print("PASS")
-            else:
-                exceptions.update({func: result})
-                print("FAIL")
-
-        print("\n" + "="*11 + " Test Ended " + "="*11, end="\n\n")
-
-        print("Errors:\n")
-
-        if exceptions:
-            for func, exc in exceptions.items():
-                excstrlist = traceback.format_exception(exc)
-                argsstr = excstrlist.pop(-1)
-                argslist = [f"{x}\n" for x in argsstr.split(os.linesep)]
-                excstrlist.extend(argslist)
-                excstr = "\n".join(f"\t\t{x}" for x in excstrlist)
-
-                print(f"\t{func.__name__}:")
-                print("\n".join(excstr) + "\n")
-        else:
-            print("\t There were no errors this time. Woohoo!")
-
-    def _run(self, func):
-        try:
-            func()
-            return None
-        except Exception as e:
-            return e
-
-
-class TestMemoClient:
+class MemoClient:
     def __init__(self, url=TEST_URL):
         self.url = url
 
@@ -138,7 +39,7 @@ class TestMemoClient:
     def register(self, email, pw, name):
         data = {
             "email": email,
-            "password": pw,
+            "password": hashlib.sha256(pw).hexdigest(),
             "name": name
         }
 
@@ -156,7 +57,7 @@ class TestMemoClient:
     def login(self, email, pw):
         data = {
             "email": email,
-            "password": pw
+            "password": hashlib.sha256(pw).hexdigest()
         }
 
         return self._request("POST", "/user/login", data, noauth=True)['data']
@@ -206,7 +107,7 @@ class TestMemoClient:
     def _request(self, method, route, data=None, noauth=False, **kwargs):
         req_url = merge_route(self.baseurl, route)
 
-        headers = kwargs.get("headers", dict())
+        headers = {}
 
         if data is not None and isinstance(data, dict):
             data = json.dumps(data).encode()
@@ -223,19 +124,134 @@ class TestMemoClient:
         if data is not None:
             request_kwargs.update({"data": data})
 
-        request_kwargs.update(headers)
+        request_kwargs.update({"headers": headers})
         request_kwargs.update(kwargs)
 
         r = self.session.request(**request_kwargs)
 
         if r.status_code // 100 != 2:
             error = r.json()['meta']
-            code = error['code']
             message = error['message']
 
-            raise MemoHTTPError(r.status_code, code, message)
+            raise MemoHTTPError(r.status_code, message)
 
         return r.json()
 
 
-test_manager = TestManager()
+@pytest.fixture
+def client():
+    client = MemoClient()
+    client.token = client.login(TEST_EMAIL, TEST_PW)
+    return client
+
+
+class TestUser:
+    def __init__(self):
+        def email_enum():
+            i = 1
+            while True:
+                yield f"nonexistent{i}@testemail.com"
+
+        self.emailgen = email_enum()
+
+    def test_register(self, client):
+        email = next(self.emailgen)
+        client.register(
+            email,
+            TEST_PW,
+            TEST_NAME
+        )
+
+        token = client.read_register_token()
+
+        client.register_verify(token)
+
+        client.login(email, TEST_PW)
+
+    def test_fail_register(self, client):
+        with pytest.raises(
+                MemoHTTPError, 
+                match=r"Status 403\: .*E\-mail.*"
+        ):
+            client.register(TEST_EMAIL, TEST_PW, TEST_NAME)
+
+    def test_fail_verify(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400\: .*Malformed.*"
+        ):
+            client.register_verify("improperly_formatted_token")
+
+    def test_fail_verify_late(self, client):
+        email = next(self.emailgen)
+        client.register(
+            email,
+            TEST_PW,
+            TEST_NAME
+        )
+        token = client.read_register_token()
+        client.register_verify(token)
+
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 403\: .*Already.*"
+        ):
+            client.register_verify(token)
+
+    def test_fail_verify_signature(self, client):
+        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MTYyMzkwMjI"\
+                "sImVtYWlsIjoibm9uZXhpc3RlbnQ2OUB0ZXN0ZW1haWwuY29tIiwicGFzc3d"\
+                "vcmQiOiJyYW5kb20gcGFzc3dvcmQiLCJuYW1lIjoidGVzdHVzZXIifQ.J0CQ"\
+                "UR27t1my8cvXZjbjcolCU4NwYqyrzT7Tn-Ztcro"
+
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 403\: .*Signature.*"
+        ):
+            client.register_verfiy(token)
+
+    def test_login(self, client):
+        client.login(TEST_EMAIL, TEST_PW)
+
+    def test_fail_login_pw(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 401: .*Incorrect.*"
+        ):
+            client.login(TEST_EMAIL, "Incorrect Password")
+
+    def test_fail_login_email(self, client):
+        email = next(self.emailgen)
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 401: .*Incorrect.*"
+        ):
+            client.login(email, TEST_PW)
+
+    def test_fail_register_empty(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400: .*Malformed.*"
+        ):
+            client._request("POST", "/user/register", {}, noauth=True)
+
+    def test_fail_verify_notgiven(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400: .*Token.*"
+        ):
+            client._request("GET", "/user/verify", noauth=True)
+
+    def test_fail_verify_empty(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400: .*Token.*"
+        ):
+            client.register_verify("")
+
+    def test_fail_login_empty(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400: .*Malformed.*"
+        ):
+            client._request("POST", "/user/login", {}, noauth=True)
