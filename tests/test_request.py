@@ -27,7 +27,7 @@ class MemoHTTPError(Exception):
 
 class MemoClient:
     def __init__(self, url=TEST_URL):
-        self.url = url
+        self.baseurl = url
 
         self.session = requests.session()
         self.session.headers.update({"User-Agent": "TestMemoClient"})
@@ -39,7 +39,7 @@ class MemoClient:
     def register(self, email, pw, name):
         data = {
             "email": email,
-            "password": hashlib.sha256(pw).hexdigest(),
+            "password": hashlib.sha256(pw.encode()).hexdigest(),
             "name": name
         }
 
@@ -57,7 +57,7 @@ class MemoClient:
     def login(self, email, pw):
         data = {
             "email": email,
-            "password": hashlib.sha256(pw).hexdigest()
+            "password": hashlib.sha256(pw.encode()).hexdigest()
         }
 
         return self._request("POST", "/user/login", data, noauth=True)['data']
@@ -145,17 +145,18 @@ def client():
     return client
 
 
+def email_enum():
+    i = 1
+    while True:
+        yield f"nonexistent{i}@testemail.com"
+
+
+emailgen = email_enum()
+
+
 class TestUser:
-    def __init__(self):
-        def email_enum():
-            i = 1
-            while True:
-                yield f"nonexistent{i}@testemail.com"
-
-        self.emailgen = email_enum()
-
     def test_register(self, client):
-        email = next(self.emailgen)
+        email = next(emailgen)
         client.register(
             email,
             TEST_PW,
@@ -183,7 +184,7 @@ class TestUser:
             client.register_verify("improperly_formatted_token")
 
     def test_fail_verify_late(self, client):
-        email = next(self.emailgen)
+        email = next(emailgen)
         client.register(
             email,
             TEST_PW,
@@ -221,7 +222,7 @@ class TestUser:
             client.login(TEST_EMAIL, "Incorrect Password")
 
     def test_fail_login_email(self, client):
-        email = next(self.emailgen)
+        email = next(emailgen)
         with pytest.raises(
                 MemoHTTPError,
                 match=r"Status 401: .*Incorrect.*"
