@@ -1,0 +1,103 @@
+endpoints:
+
+GET    | /memo/all
+    - Retrieves every objects. Truncates content and memos/directories key.
+
+GET    | /memo
+    - Gets a root folder content, only returns content/directories.
+
+GET    | /memo/<id>
+    - Gets a memo/folder object.
+
+POST   | /memo
+    - Adds a memo. Creates memo or directory depending on the type
+
+PUT    | /memo/<id>
+    - Edits the memo/directory. ignores the subdirectory.
+
+DELETE | /memo/<id>
+    - Deletes the memo / directory. If id is a directory, also deletes every contents inside.
+
+POST   | /memo/update
+    - Receives ID:version pair of keys and responds with updated memos if outdated.
+
+
+POST   | /user/login
+    - Gets an authentication token.
+
+POST   | /user/register
+    - Sends a registration token to the given email.
+
+GET   | /user/register/verify?token=<token>
+    - Verifies the token and finalizes the registration process(=generates user entry)
+
+GET   | /user/register/_read_token
+    - Activated only when in test mode. returns the most recently generated registration token.
+
+
+=== Models ===
+
+==== User ====
+
+id: User ID. incremental value.
+
+
+=== JSON formats ===
+
+==== Memo ====
+
+|  field name |                    description                        | Present in |
+====================================================================================
+|        type | Type of entry. M for memo, D for dictionary           | Both       |
+------------------------------------------------------------------------------------
+|          id | Type + base64url random 8bytes with stripped padding. | Both       |
+------------------------------------------------------------------------------------
+|        name | Name of the entry. 50 max with global limit           | Both       |
+------------------------------------------------------------------------------------
+|     content | Content of the memo. global limit applies.            | Memo       |
+------------------------------------------------------------------------------------
+| directories | List of subdirectory IDs.                             | Directory  |
+------------------------------------------------------------------------------------
+|       memos | List of memos contained in a directory.               | Directory  |
+------------------------------------------------------------------------------------
+|      parent | Parent directory. None if stored in root.             | Both       |
+------------------------------------------------------------------------------------
+|     version | base64url random 6bytes                               | Both       |
+------------------------------------------------------------------------------------
+| create_time | The time of creation in GMT                           | Both       |
+------------------------------------------------------------------------------------
+|   edit_time | Latest time of edit in GMT                            | Both       |
+------------------------------------------------------------------------------------
+
+Memo example:
+{
+    "type": "M",
+    "id": "MD98Itf6uT6I",
+    "name": "Test memo",
+    "content": "Gyao Gyao",
+    "parent": "DVqRYFsoqr_0",
+    "version": "u1UqRF2J",
+    "create_time": 1647232077,
+    "edit_time": 1647260848
+}
+
+Directory example:
+{
+    "type": "D",
+    "id": "Dzjzgm9ix2GU",
+    "name": "Secret Juju",
+    "directories": ["DVqRYFsoqr_0", "DVqRYFsoqr_0"],
+    "memos": [{memo object}],
+    "parent": null,
+    "version": "QTpgQWdt",
+    "create_time": 1647232363,
+    "edit_time": 1647261181
+}
+
+==== JWT ====
+
+===== Registration Token =====
+
+{
+    "exp":
+}
