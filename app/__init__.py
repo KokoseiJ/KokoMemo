@@ -2,8 +2,6 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
-from .config import test_setup
-
 import os
 
 db = SQLAlchemy()
@@ -16,12 +14,9 @@ def create_app():
     app.config.from_prefixed_env()
 
     if app.config['DEBUG']:
-        app.config.from_object("config.DebugConfig")
+        app.config.from_object("app.config.DebugConfig")
     else:
-        app.config.from_object("config.ProdConfig")
-
-    if app.config['TESTING']:
-        app.config.from_object("config.TestConfig")
+        app.config.from_object("app.config.ProdConfig")
 
     inst_config_path = os.path.join(app.instance_path, "config.py")
 
@@ -36,8 +31,5 @@ def create_app():
 
     db.init_app(app)
     migrate.init_app(app)
-
-    if app.config['TESTING']:
-        test_setup()
 
     return app
