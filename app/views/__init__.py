@@ -1,14 +1,9 @@
 # pylint: disable=wrong-import-position,import-self
 
-import os
+from app.utils import get_module_list
 
-path = os.path.dirname(os.path.abspath(__file__))
-
-__all__ = [
-    x[:-3] for x in os.listdir(path)
-    if x.endswith(".py") and not x.startswith("_")
-]
+__all__ = get_module_list(__file__)
 
 from . import *
 
-del path, os
+del get_module_list
