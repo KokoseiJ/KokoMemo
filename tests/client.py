@@ -11,7 +11,7 @@ def merge_route(baseurl, route):
 
 class MemoHTTPError(Exception):
     def __init__(self, status, message):
-        self.args = (f"Status {status}: {message}")
+        self.args = (f"Status {status}: {message}",)
         self.status = status
         self.message = message
 

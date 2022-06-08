@@ -36,5 +36,5 @@ def app():
 
 @pytest.fixture
 def client(app):
-    client = MemoClient(app.test_client(), f"/api/{TEST_VER}")
+    client = MemoClient(app.test_client(), TEST_VER)
     return client
