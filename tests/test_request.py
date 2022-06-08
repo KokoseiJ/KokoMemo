@@ -88,19 +88,14 @@ class TestUser:
         ):
             client.login(email, TEST_PW)
 
+    # --- Empty JSON ---
+
     def test_fail_register_empty(self, client):
         with pytest.raises(
                 MemoHTTPError,
                 match=r"Status 400: .*Malformed.*"
         ):
             client._request("POST", "/user/register", {}, noauth=True)
-
-    def test_fail_verify_notgiven(self, client):
-        with pytest.raises(
-                MemoHTTPError,
-                match=r"Status 400: .*Token.*"
-        ):
-            client._request("GET", "/user/verify", noauth=True)
 
     def test_fail_verify_empty(self, client):
         with pytest.raises(
@@ -115,3 +110,26 @@ class TestUser:
                 match=r"Status 400: .*Malformed.*"
         ):
             client._request("POST", "/user/login", {}, noauth=True)
+
+    # --- JSON not given ---
+
+    def test_fail_register_notgiven(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400: .*JSON.*"
+        ):
+            client._request("POST", "/user/register", noauth=True)
+
+    def test_fail_verify_notgiven(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400: .*Token.*"
+        ):
+            client._request("GET", "/user/verify", noauth=True)
+
+    def test_fail_login_notgiven(self, client):
+        with pytest.raises(
+                MemoHTTPError,
+                match=r"Status 400: .*JSON.*"
+        ):
+            client._request("POST", "/user/login", noauth=True)  

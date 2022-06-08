@@ -1,6 +1,5 @@
 import json
 import hashlib
-import requests
 
 
 def merge_route(baseurl, route):
@@ -18,11 +17,9 @@ class MemoHTTPError(Exception):
 
 
 class MemoClient:
-    def __init__(self, url):
-        self.baseurl = url
-
-        self.session = requests.session()
-        self.session.headers.update({"User-Agent": "TestMemoClient"})
+    def __init__(self, testclient, version="v1"):
+        self.testclient = testclient
+        self.baseurl = f"/api/{version}"
 
         self.token = None
 
@@ -52,7 +49,10 @@ class MemoClient:
             "password": hashlib.sha256(pw.encode()).hexdigest()
         }
 
-        return self._request("POST", "/user/login", data, noauth=True)['data']
+        token = self._request("POST", "/user/login", data, noauth=True)['data']
+        self.token = token
+
+        return token
 
     # ===== Memo =====
 
@@ -82,9 +82,9 @@ class MemoClient:
         data = {}
 
         for key in ["id_", "name", "content", "parent", "version"]:
-            value = locals().get(key.strip("_"))
+            value = locals().get(key)
             if value is not None:
-                data.update({key: value})
+                data.update({key.strip("_"): value})
 
         return self._request("PUT", f"/memo/{id_}", data)['data']
 
@@ -97,34 +97,34 @@ class MemoClient:
     # ===== End =====
 
     def _request(self, method, route, data=None, noauth=False, **kwargs):
-        req_url = merge_route(self.baseurl, route)
-
-        headers = {}
-
-        if data is not None and isinstance(data, dict):
-            data = json.dumps(data).encode()
-            headers.update({"Content-Type": "application/json"})
-
-        if not noauth:
-            headers.update({"Authorization": f"Bearer {self.token}"})
+        url = merge_route(self.baseurl, route)
 
         request_kwargs = {
             "method": method,
-            "url": req_url
+            "path": url
         }
 
+        headers = {}
+
+        if not noauth and self.token is not None:
+            headers.update({"Authorization": f"Bearer {self.token}"})
+            request_kwargs.update({"headers": headers})
+
         if data is not None:
+            if isinstance(data, dict):
+                data = json.dumps(data).encode()
+                request_kwargs.update({"content_type": "application/json"})
+            
             request_kwargs.update({"data": data})
 
-        request_kwargs.update({"headers": headers})
         request_kwargs.update(kwargs)
 
-        r = self.session.request(**request_kwargs)
+        r = self.testclient.open(**request_kwargs)
 
         if r.status_code // 100 != 2:
-            error = r.json()['meta']
+            error = r.json['meta']
             message = error['message']
 
             raise MemoHTTPError(r.status_code, message)
 
-        return r.json()
+        return r.json

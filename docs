@@ -40,7 +40,7 @@ GET   | /user/register/_read_token
 ==== User ====
 
 id: base64url random 9bytes
-pw: bcrypt hashed sha256 hashed password
+password: bcrypt hashed sha256 hashed password
 email: email
 name: name
 create_time: create_time
@@ -52,7 +52,7 @@ create_time: create_time
 
 |  field name |                    description                        | Present in |
 ====================================================================================
-|        type | Type of entry. M for memo, D for dictionary           | Both       |
+|        type | Type of entry. M for memo, D for directory            | Both       |
 ------------------------------------------------------------------------------------
 |          id | Type + base64url random 8bytes with stripped padding. | Both       |
 ------------------------------------------------------------------------------------
@@ -60,9 +60,13 @@ create_time: create_time
 ------------------------------------------------------------------------------------
 |     content | Content of the memo. global limit applies.            | Memo       |
 ------------------------------------------------------------------------------------
-| directories | List of subdirectory IDs.                             | Directory  |
+|     preview | Preview of the memo content.                          | Memo       |
+------------------------------------------------------------------------------------
+| directories | List of subdirectory objects, content stripped.       | Directory  |
 ------------------------------------------------------------------------------------
 |       memos | List of memos contained in a directory.               | Directory  |
+------------------------------------------------------------------------------------
+|    is_empty | Bool indication whether if the directory is empty.    | Directory  |
 ------------------------------------------------------------------------------------
 |      parent | Parent directory. None if stored in root.             | Both       |
 ------------------------------------------------------------------------------------
@@ -73,38 +77,27 @@ create_time: create_time
 |   edit_time | Latest time of edit in GMT                            | Both       |
 ------------------------------------------------------------------------------------
 
-Memo example:
-{
-    "type": "M",
-    "id": "MD98Itf6uT6I",
-    "name": "Test memo",
-    "content": "Gyao Gyao",
-    "parent": "DVqRYFsoqr_0",
-    "version": "u1UqRF2J",
-    "create_time": 1647232077,
-    "edit_time": 1647260848
-}
-
-Directory example:
-{
-    "type": "D",
-    "id": "Dzjzgm9ix2GU",
-    "name": "Secret Juju",
-    "directories": ["DVqRYFsoqr_0", "DVqRYFsoqr_0"],
-    "memos": [{memo object}],
-    "parent": null,
-    "version": "QTpgQWdt",
-    "create_time": 1647232363,
-    "edit_time": 1647261181
-}
-
 ==== JWT ====
 
 ===== Registration Token =====
 
-{
+{   
+    "ctx": "verify"
     "exp": expiring time
     "email": email
     "password": password,
     "name": name
 }
+
+===== Authentication Token =====
+
+{
+    "ctx": "auth"
+    "iat": issued time
+    "exp": expiring time
+    "sub": user id
+}
+
+===== Auto Login Token =====
+
+f"{entryid}{version}"
