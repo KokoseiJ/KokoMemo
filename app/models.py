@@ -61,7 +61,7 @@ class Directory(db.Model):
     owner = db.relationship("User", back_populates="directories")
     owner_id = db.Column(
         db.String(12), db.ForeignKey('user.id'), nullable=False)
-    parent = db.relationship("Directory", back_populates="directories")
+    parent = db.relationship("Directory", back_populates="directories", remote_side="Directory.id")
     parent_id = db.Column(
         db.String(12), db.ForeignKey('directory.id'), nullable=False)
 

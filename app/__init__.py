@@ -13,6 +13,12 @@ def create_app():
 
     app.config.from_prefixed_env()
 
+    if os.path.exists(app.instance_path):
+        if os.path.isfile(app.instance_path):
+            raise TypeError(f"{app.instance_path} should be a dir.")
+    else:
+        os.mkdir(app.instance_path)
+
     if app.config['DEBUG']:
         app.config.from_object("app.config.DebugConfig")
     else:
