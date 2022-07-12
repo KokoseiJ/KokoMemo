@@ -1,5 +1,4 @@
 ## Start of Python.gitignore
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -160,11 +159,9 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-
 ## End of Python.gitignore
 
 ## Start of SublimeText.gitignore
-
 # Cache files for Sublime Text
 *.tmlanguage.cache
 *.tmPreferences.cache
@@ -196,5 +193,5 @@ bh_unicode_properties.cache
 # Sublime-github package stores a github token in this file
 # https://packagecontrol.io/packages/sublime-github
 GitHub.sublime-settings
-
 ## End of SublimeText.gitignore
+
