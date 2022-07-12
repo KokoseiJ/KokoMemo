@@ -41,10 +41,46 @@ GET   | /user/register/_read_token
 
 id: base64url random 9bytes
 password: bcrypt hashed sha256 hashed password
-email: email
-name: name
-create_time: create_time
+email
+name
+used_bytes
 
+create_time
+
+memos
+directories
+
+==== Memo ====
+id: M + base64url random 8bytes with stripped padding
+
+name: 50 char limit, counted towards used_bytes
+content: counted towards used_bytes
+preview: 50 char limit
+
+version: 4byte hex
+create_time
+edit_time
+
+owner
+owner_id
+parent
+parent_id
+
+==== Directory ====
+id
+
+name
+
+version
+create_time
+edit_time
+
+owner
+owner_id
+parent
+parent_id
+memos
+directories
 
 === JSON formats ===
 

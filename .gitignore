@@ -195,3 +195,5 @@ bh_unicode_properties.cache
 GitHub.sublime-settings
 ## End of SublimeText.gitignore
 
+instance/
+migrations/
